@@ -1,0 +1,12 @@
+[
+  { "command": "move cursor left", "shortcut": "h" },
+  { "command": "move cursor right", "shortcut": "l" },
+  { "command": "move cursor up", "shortcut": "k" },
+  { "command": "move cursor down", "shortcut": "j" },
+  { "command": "delete character", "shortcut": "x" },
+  { "command": "insert mode", "shortcut": "i" },
+  { "command": "append after cursor", "shortcut": "a" },
+  { "command": "save file", "shortcut": ":w" },
+  { "command": "quit", "shortcut": ":q" },
+  { "command": "undo", "shortcut": "u" }
+]
