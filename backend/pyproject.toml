@@ -14,6 +14,7 @@ dependencies = [
     "sqlalchemy",
     "alembic",
     "asyncpg"
+    ,"greenlet"
 ]
 
 [tool.uv]

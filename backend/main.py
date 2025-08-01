@@ -29,8 +29,8 @@ async def get_db():
     async with SessionLocal() as session:
         yield session
 
-app = FastAPI()
 
+app = FastAPI()
 # Allow CORS for local frontend development
 app.add_middleware(
     CORSMiddleware,
@@ -45,17 +45,6 @@ async def get_quiz(db=Depends(get_db)):
     result = await db.execute(select(Question))
     questions = result.scalars().all()
     return questions
-
-app = FastAPI()
-
-# Allow CORS for local frontend development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # For production, restrict this to your frontend domain
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 class HealthResponse(BaseModel):
     status: str
