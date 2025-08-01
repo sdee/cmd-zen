@@ -10,7 +10,10 @@ dependencies = [
     "pydantic",
     "psycopg2-binary",
     "python-dotenv",
-    "pytest"
+    "pytest",
+    "sqlalchemy",
+    "alembic",
+    "asyncpg"
 ]
 
 [tool.uv]
