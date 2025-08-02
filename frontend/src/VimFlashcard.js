@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSpring, animated, config } from "@react-spring/web";
+
+// Config: set to true to fetch from API, false to use local JSON
+const USE_API = true;
 import commandsData from "./commands.json";
 
 // Fisher-Yates shuffle
@@ -12,16 +15,39 @@ function shuffle(array) {
   return arr;
 }
 
+
 export default function VimFlashcard() {
-  const [commands] = useState(commandsData);
-  const [order, setOrder] = useState(() => shuffle([...Array(commandsData.length).keys()]));
+  const [commands, setCommands] = useState([]);
+  const [order, setOrder] = useState([]);
   const [orderIdx, setOrderIdx] = useState(0);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("typing"); // typing | correct | wrong
   const [showAnswer, setShowAnswer] = useState(false);
   const inputRef = useRef(null);
 
-  const current = commands[order[orderIdx]];
+  // Fetch questions from API or use local JSON
+  useEffect(() => {
+    async function loadQuestions() {
+      if (USE_API) {
+        try {
+          const res = await fetch("/api/quiz");
+          if (!res.ok) throw new Error("API error");
+          const data = await res.json();
+          setCommands(data);
+          setOrder(shuffle([...Array(data.length).keys()]));
+        } catch (e) {
+          setCommands(commandsData);
+          setOrder(shuffle([...Array(commandsData.length).keys()]));
+        }
+      } else {
+        setCommands(commandsData);
+        setOrder(shuffle([...Array(commandsData.length).keys()]));
+      }
+    }
+    loadQuestions();
+  }, []);
+
+  const current = commands.length > 0 ? commands[order[orderIdx]] : { command: "", shortcut: "" };
 
   // Card flip animation
   const { transform, opacity } = useSpring({
@@ -40,7 +66,7 @@ export default function VimFlashcard() {
   useEffect(() => {
     // Focus for keyboard input
     if (inputRef.current) inputRef.current.focus();
-  }, [orderIdx, showAnswer]);
+  }, [orderIdx, showAnswer, commands]);
 
   useEffect(() => {
     if (status === "correct") {
