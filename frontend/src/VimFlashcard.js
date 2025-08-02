@@ -89,11 +89,35 @@ export default function VimFlashcard() {
         setInput(nextInput);
         if (nextInput === current.shortcut) {
           setStatus("correct");
+          // Fire-and-forget POST to /api/guess
+          if (USE_API && current.id) {
+            fetch("/api/guess", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                question_id: current.id,
+                answer: nextInput,
+                is_correct: true
+              })
+            }).catch(() => {});
+          }
         }
       } else {
         setInput(nextInput);
         setStatus("wrong");
         setTimeout(() => setShowAnswer(true), 0);
+        // Fire-and-forget POST to /api/guess for wrong answer
+        if (USE_API && current.id) {
+          fetch("/api/guess", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question_id: current.id,
+              answer: nextInput,
+              is_correct: false
+            })
+          }).catch(() => {});
+        }
       }
     } else if (e.key === "Backspace") {
       setInput(input.slice(0, -1));
