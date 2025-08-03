@@ -19,7 +19,13 @@ dependencies = [
     ,"httpx"
     ,"pytest-asyncio"
     ,"asgi_lifespan"
+    ,"aiosqlite"
 ]
 
 [tool.uv]
 # uv-specific settings can go here if needed
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::ResourceWarning"
+]

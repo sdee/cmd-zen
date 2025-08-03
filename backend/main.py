@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 
@@ -11,12 +10,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from routers import quiz, health
 from db import get_engine, get_sessionmaker
+import logging
+
+# Enable logging for debugging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def create_app(sessionmaker=None):
     if sessionmaker is None:
         engine = get_engine()
         sessionmaker = get_sessionmaker(engine)
     quiz.set_sessionmaker(sessionmaker)
+    logger.debug(f"Sessionmaker provided: {sessionmaker}")
     app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
@@ -34,6 +39,7 @@ def create_app(sessionmaker=None):
 
     if os.path.isdir("static"):
         app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    logger.debug("App initialized successfully")
     return app
 
 # Default app for production

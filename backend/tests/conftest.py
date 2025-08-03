@@ -1,4 +1,3 @@
-
 import pytest
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -31,9 +30,11 @@ async def setup_test_db(request):
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
-
     # Provide the app with the test sessionmaker for the test class
-    request.cls.app = create_app(TestSessionLocal)
+    if hasattr(request, 'cls') and request.cls is not None:
+        request.cls.app = create_app(TestSessionLocal)
+    else:
+        request.node.app = create_app(TestSessionLocal)
 
     yield
     await engine.dispose()
