@@ -15,6 +15,9 @@ dependencies = [
     "alembic",
     "asyncpg"
     ,"greenlet"
+    ,"pytest"
+    ,"httpx"
+    ,"pytest-asyncio"
 ]
 
 [tool.uv]

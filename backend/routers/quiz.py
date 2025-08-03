@@ -5,22 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import SessionLocal
 from models import Question, Guess
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime
 
 class QuestionOut(BaseModel):
     id: int
     command: str
     shortcut: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class GuessCreate(BaseModel):
     question_id: int
     answer: str
     is_correct: bool
-
-
-from datetime import datetime
 
 class GuessOut(BaseModel):
     id: int
@@ -28,8 +25,7 @@ class GuessOut(BaseModel):
     answer: str
     is_correct: bool
     timestamp: datetime
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 async def get_db():
     async with SessionLocal() as session:
