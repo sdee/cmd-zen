@@ -71,7 +71,7 @@ function VimFlashcard(props) {
     if (status === "correct") {
       const timeout = setTimeout(() => {
         nextCommand();
-      }, 600);
+      }, 400);
       return () => clearTimeout(timeout);
     }
   }, [status]);
