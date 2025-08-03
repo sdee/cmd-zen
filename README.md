@@ -5,6 +5,8 @@ The primary goal of this project is to create a fluid UI that allows users to mo
 
 Beyond the basic implementation, I plan to experiment with visualizations and metrics that highlight which commands users should focus on for more targeted practice. 
 
+API interface and backend business logic is written by me. Front-end is prototypical and generated with Copilot.  
+
 ## Project Structure
 
 - `backend/` — FastAPI app (Python)
