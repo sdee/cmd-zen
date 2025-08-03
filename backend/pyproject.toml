@@ -18,6 +18,7 @@ dependencies = [
     ,"pytest"
     ,"httpx"
     ,"pytest-asyncio"
+    ,"asgi_lifespan"
 ]
 
 [tool.uv]
