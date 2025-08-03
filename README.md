@@ -1,4 +1,9 @@
-# FastAPI + React + Postgres Template (All-in-One, AWS-Ready)
+# Cmd Zen
+Cmd Zen is an interactive app designed to help users memorize keyboard commands. I'm starting with Vim, but the application can easily be generalized. 
+
+The primary goal of this project is to create a fluid UI that allows users to move seamlessly from one question to the next without lifting their fingers from the keyboard (no need for mouse clicks). The interface is built to encourage flow and minimize distractions.
+
+Beyond the basic implementation, I plan to experiment with visualizations and metrics that highlight which commands users should focus on for more targeted practice. 
 
 ## Project Structure
 
