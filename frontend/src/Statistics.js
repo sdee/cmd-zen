@@ -76,23 +76,26 @@ export default function Statistics({ onBack }) {
     <div
       className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center"
       style={{ zIndex: 1000 }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onBack();
+        }
+      }}
     >
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl w-full">
-        <button
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-          onClick={onBack}
-        >
-          &times;
-        </button>
-        {content}
-        <div className="mt-8 flex justify-center">
+        <div style={{ position: "relative" }}>
           <a
             href="#"
-            className="text-blue-500 hover:underline"
-            onClick={onBack}
+            className="text-gray-800 text-xl font-bold hover:text-gray-600"
+            style={{ position: "absolute", top: "5px", right: "5px", zIndex: 10 }}
+            onClick={(e) => {
+              e.preventDefault();
+              onBack();
+            }}
           >
-            Close Statistics
+            X
           </a>
+          {content}
         </div>
       </div>
     </div>
