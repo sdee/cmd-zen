@@ -1,8 +1,11 @@
-#!/usr/bin/env python3
-import os, sys, time, glob
+import os, sys, time
 from urllib.parse import quote_plus
 
-# 1) Build DATABASE_URL from EB's attached RDS env if not provided
+# flush logs line-by-line
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+# Build DATABASE_URL from attached RDS env if not provided
 db_url = os.getenv("DATABASE_URL")
 if not db_url and os.getenv("RDS_HOSTNAME"):
     user = os.getenv("RDS_USERNAME", "")
@@ -10,33 +13,23 @@ if not db_url and os.getenv("RDS_HOSTNAME"):
     host = os.getenv("RDS_HOSTNAME", "")
     port = os.getenv("RDS_PORT", "5432")
     name = os.getenv("RDS_DB_NAME", "ebdb")
-    # psycopg3 driver
     db_url = f"postgresql+psycopg://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{quote_plus(name)}"
     os.environ["DATABASE_URL"] = db_url
 
-def mask(url: str) -> str:
-    if not url: return "<empty>"
-    return url.replace(os.getenv("RDS_PASSWORD",""), "******")
+print("Postdeploy: using DB URL (masked):", (db_url or "<empty>").replace(os.getenv("RDS_PASSWORD",""), "******"))
 
-print("DATABASE_URL (masked):", mask(os.getenv("DATABASE_URL","")))
-
-# 2) Ensure alembic & SQLAlchemy can import
+# Import deps
 try:
     from sqlalchemy import create_engine, text
-except Exception as e:
-    print("ERROR: SQLAlchemy not installed in EB venv?", e, file=sys.stderr)
-    sys.exit(1)
-try:
     from alembic.config import Config
     from alembic import command
 except Exception as e:
-    print("ERROR: Alembic not installed in EB venv?", e, file=sys.stderr)
+    print("ERROR: missing dependencies in EB venv (sqlalchemy/alembic/psycopg).", e, file=sys.stderr)
     sys.exit(1)
 
-# 3) Wait for DB to be reachable (first boots can lag)
-engine = None
+# Wait for DB to be reachable (fresh RDS can lag)
 delay = 2
-for attempt in range(1, 11):  # ~ up to ~ 6 min with backoff
+for attempt in range(1, 11):
     try:
         engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True, future=True)
         with engine.connect() as conn:
@@ -46,12 +39,12 @@ for attempt in range(1, 11):  # ~ up to ~ 6 min with backoff
     except Exception as e:
         print(f"DB not ready (attempt {attempt}): {e}", file=sys.stderr)
         time.sleep(delay)
-        delay = min(delay * 1.5, 60)
+        delay = min(int(delay * 1.5), 60)
 else:
-    print("ERROR: RDS never became reachable. Aborting migrations.", file=sys.stderr)
+    print("ERROR: RDS never became reachable; aborting migrations.", file=sys.stderr)
     sys.exit(1)
 
-# 4) Run Alembic programmatically using /var/app/current
+# Run Alembic programmatically, forcing the URL so localhost isn't used
 app_dir = "/var/app/current"
 alembic_ini = os.path.join(app_dir, "alembic.ini")
 if not os.path.exists(alembic_ini):
@@ -59,7 +52,6 @@ if not os.path.exists(alembic_ini):
     sys.exit(1)
 
 cfg = Config(alembic_ini)
-# Force URL here so Alembic doesn't rely on env.py guessing
 cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
 print("Running alembic upgrade head…")
