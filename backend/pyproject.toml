@@ -21,6 +21,7 @@ dependencies = [
     "asgi_lifespan",
     "aiosqlite",
     "gunicorn>=23.0.0",
+    "ruff>=0.12.9",
 ]
 
 [tool.uv]

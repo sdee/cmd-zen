@@ -27,6 +27,7 @@ class GuessCreate(BaseModel):
     answer: str
     is_correct: bool
 
+class GuessOut(BaseModel):
     id: int
     question_id: int
     answer: str
@@ -46,8 +47,11 @@ def set_sessionmaker(sm):
     global SessionLocal
     SessionLocal = sm
 
+
 # Log the state of SessionLocal
 logger.debug(f"SessionLocal state: {SessionLocal}")
+
+router = APIRouter()
 
 
 
