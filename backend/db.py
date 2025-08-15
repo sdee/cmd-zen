@@ -1,19 +1,43 @@
 # db.py
 import os
+from typing import Generator, Optional
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 
-def _build_url_from_rds():
+# ---- build URL from env or EB's RDS_* ----
+def _db_url() -> str:
+    url = os.getenv("DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
+    if url:
+        return url
     if os.getenv("RDS_HOSTNAME"):
-        user = os.environ["RDS_USERNAME"]
-        pwd  = os.environ["RDS_PASSWORD"]
-        host = os.environ["RDS_HOSTNAME"]
-        port = os.environ.get("RDS_PORT", "5432")
-        name = os.environ["RDS_DB_NAME"]
-        return f"postgresql+psycopg2://{user}:{pwd}@{host}:{port}/{name}"
-    return None
+        return (
+            "postgresql+psycopg2://"
+            f"{os.environ['RDS_USERNAME']}:{os.environ['RDS_PASSWORD']}"
+            f"@{os.environ['RDS_HOSTNAME']}:{os.getenv('RDS_PORT','5432')}"
+            f"/{os.environ['RDS_DB_NAME']}"
+        )
+    raise RuntimeError("Set DATABASE_URL/TEST_DATABASE_URL or provide RDS_* vars.")
+
+_engine = None
+_Session = None
 
 def get_engine():
-    url = os.getenv("DATABASE_URL") or os.getenv("TEST_DATABASE_URL") or _build_url_from_rds()
-    if not url:
-        raise RuntimeError("DATABASE_URL or TEST_DATABASE_URL must be set in the environment")
-    return create_engine(url, pool_pre_ping=True, future=True)
+    global _engine
+    if _engine is None:
+        _engine = create_engine(_db_url(), pool_pre_ping=True, future=True)
+    return _engine
+
+def get_sessionmaker():
+    global _Session
+    if _Session is None:
+        _Session = sessionmaker(bind=get_engine(), autoflush=False, autocommit=False)
+    return _Session
+
+# FastAPI dependency (use if you want)
+def get_db() -> Generator[Session, None, None]:
+    SessionLocal = get_sessionmaker()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
