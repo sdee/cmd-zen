@@ -13,13 +13,14 @@ dependencies = [
     "pytest",
     "sqlalchemy",
     "alembic",
-    "asyncpg"
-    ,"greenlet"
-    ,"pytest"
-    ,"httpx"
-    ,"pytest-asyncio"
-    ,"asgi_lifespan"
-    ,"aiosqlite"
+    "asyncpg",
+    "greenlet",
+    "pytest",
+    "httpx",
+    "pytest-asyncio",
+    "asgi_lifespan",
+    "aiosqlite",
+    "gunicorn>=23.0.0",
 ]
 
 [tool.uv]
