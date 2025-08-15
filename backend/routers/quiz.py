@@ -1,9 +1,7 @@
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.future import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from typing import Callable, Counter
 import logging
 
@@ -29,7 +27,6 @@ class GuessCreate(BaseModel):
     answer: str
     is_correct: bool
 
-class GuessOut(BaseModel):
     id: int
     question_id: int
     answer: str
@@ -37,9 +34,9 @@ class GuessOut(BaseModel):
     timestamp: datetime
     model_config = ConfigDict(from_attributes=True)
 
-async def get_db():
+def get_db():
     assert SessionLocal is not None, "SessionLocal must be set before using get_db"
-    async with SessionLocal() as session:
+    with SessionLocal() as session:
         logger.debug("Session accessed in get_db")
         logger.debug(f"Session state: {session}")
         yield session
@@ -52,32 +49,31 @@ def set_sessionmaker(sm):
 # Log the state of SessionLocal
 logger.debug(f"SessionLocal state: {SessionLocal}")
 
-router = APIRouter()
 
 
 @router.get("/api/quiz", response_model=List[QuestionOut])
-async def get_quiz(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Question))
+def get_quiz(db: Session = Depends(get_db)):
+    result = db.execute(select(Question))
     questions = result.scalars().all()
     return questions
 
 
 @router.post("/api/guess", response_model=GuessOut, status_code=status.HTTP_201_CREATED)
-async def create_guess(guess: GuessCreate, db: AsyncSession = Depends(get_db)):
+def create_guess(guess: GuessCreate, db: Session = Depends(get_db)):
     new_guess = Guess(
         question_id=guess.question_id,
         answer=guess.answer,
         is_correct=guess.is_correct
     )
     db.add(new_guess)
-    await db.commit()
-    await db.refresh(new_guess)
+    db.commit()
+    db.refresh(new_guess)
     return new_guess
 
 
 @router.get("/api/guesses", response_model=List[GuessOut])
-async def get_guesses(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Guess))
+def get_guesses(db: Session = Depends(get_db)):
+    result = db.execute(select(Guess))
     guesses = result.scalars().all()
     guesses.sort(key=lambda g: g.timestamp, reverse=True)
     return guesses
@@ -105,11 +101,11 @@ def calculate_metrics(guesses_with_questions):
 
 # Refactor get_metrics to use the new function
 @router.get("/api/metrics", response_model=dict)
-async def get_metrics(db: AsyncSession = Depends(get_db)):
+def get_metrics(db: Session = Depends(get_db)):
     logger.debug("Session accessed in get_db")
     logger.debug(f"Session state: {db}")
 
-    result = await db.execute(
+    result = db.execute(
         select(Guess, Question).join(Question, Guess.question_id == Question.id)
     )
     guesses_with_questions = result.all()
