@@ -1,22 +1,19 @@
-
-
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+# db.py
 import os
-from models import Base, Question
+from sqlalchemy import create_engine
 
-def get_engine(database_url=None, echo=True):
-    if database_url is None:
-        database_url = os.getenv("DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
-        if not database_url:
-            raise RuntimeError("DATABASE_URL or TEST_DATABASE_URL must be set in the environment")
-        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
-    return create_async_engine(database_url, echo=echo, future=True)
+def _build_url_from_rds():
+    if os.getenv("RDS_HOSTNAME"):
+        user = os.environ["RDS_USERNAME"]
+        pwd  = os.environ["RDS_PASSWORD"]
+        host = os.environ["RDS_HOSTNAME"]
+        port = os.environ.get("RDS_PORT", "5432")
+        name = os.environ["RDS_DB_NAME"]
+        return f"postgresql+psycopg2://{user}:{pwd}@{host}:{port}/{name}"
+    return None
 
-def get_sessionmaker(engine):
-    return sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-# No global SessionLocal here! It will be set in main.py and injected in routers.
-
-
-
+def get_engine():
+    url = os.getenv("DATABASE_URL") or os.getenv("TEST_DATABASE_URL") or _build_url_from_rds()
+    if not url:
+        raise RuntimeError("DATABASE_URL or TEST_DATABASE_URL must be set in the environment")
+    return create_engine(url, pool_pre_ping=True, future=True)
