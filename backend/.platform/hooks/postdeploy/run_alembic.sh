@@ -14,12 +14,21 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+# Log DATABASE_URL for debugging
+echo "Using DATABASE_URL: ${DATABASE_URL}"
+
 # Always write a clean, valid alembic.ini
 cat > alembic.ini <<EOF
 [alembic]
 script_location = alembic
 sqlalchemy.url = ${DATABASE_URL}
 EOF
+
+# Validate alembic.ini
+if ! grep -q "[alembic]" alembic.ini; then
+  echo "Error: alembic.ini is missing the [alembic] section header." >&2
+  exit 1
+fi
 
 # Run migrations
 alembic upgrade head
