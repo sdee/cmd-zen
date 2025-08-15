@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def create_app(sessionmaker=None):
     if sessionmaker is None:
         engine = get_engine()
-        sessionmaker = get_sessionmaker(engine)
+        sessionmaker = get_sessionmaker()
     quiz.set_sessionmaker(sessionmaker)
     logger.debug(f"Sessionmaker provided: {sessionmaker}")
     app = FastAPI()
