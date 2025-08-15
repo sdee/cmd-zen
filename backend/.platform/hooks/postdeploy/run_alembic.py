@@ -13,7 +13,7 @@ if not db_url and os.getenv("RDS_HOSTNAME"):
     host = os.getenv("RDS_HOSTNAME", "")
     port = os.getenv("RDS_PORT", "5432")
     name = os.getenv("RDS_DB_NAME", "ebdb")
-    db_url = f"postgresql+psycopg://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{quote_plus(name)}"
+    db_url = f"postgresql+psycopg2://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{quote_plus(name)}" 
     os.environ["DATABASE_URL"] = db_url
 
 print("Postdeploy: using DB URL (masked):", (db_url or "<empty>").replace(os.getenv("RDS_PASSWORD",""), "******"))
