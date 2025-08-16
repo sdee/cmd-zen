@@ -1,6 +1,11 @@
 import os
 from sqlalchemy import engine_from_config, pool
 from alembic import context
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Pull connection URL from EB's default RDS_* environment variables
 if os.getenv("RDS_HOSTNAME"):
@@ -13,6 +18,9 @@ if os.getenv("RDS_HOSTNAME"):
 else:
     # fallback to DATABASE_URL or local dev
     db_url = os.getenv("DATABASE_URL", "postgresql://localhost:5432/mydb")
+
+# Log the constructed db_url
+logger.info(f"Using database URL: {db_url}")
 
 # Alembic config object
 config = context.config
