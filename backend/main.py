@@ -1,4 +1,3 @@
-# ...existing code...
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -53,6 +52,10 @@ def serve_index():
 
 @app.get("/{full_path:path}")
 def catch_all(full_path: str):
+    # Exclude API paths from being handled by the catch-all route
+    if full_path.startswith("api") or full_path.startswith("health") or full_path.startswith("quiz"):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+
     candidate = os.path.join("static", full_path)
     if os.path.exists(candidate) and not os.path.isdir(candidate):
         return FileResponse(candidate)
@@ -60,4 +63,3 @@ def catch_all(full_path: str):
     if os.path.exists(index):
         return FileResponse(index)
     return JSONResponse({"detail": "Frontend not deployed. Build and copy to static/."})
-# ...existing code...
