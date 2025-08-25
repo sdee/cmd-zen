@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 import traceback
+import time
 
 from sqlalchemy import engine_from_config, pool, text
 from alembic import context
@@ -68,42 +69,96 @@ def check_db_state(connection, label=""):
             result = connection.execute(text("SELECT * FROM alembic_version"))
             versions = [row[0] for row in result]
             logger.info(f"Alembic version: {versions}")
+        
+        # Test permissions
+        try:
+            logger.info("Testing database permissions...")
+            connection.execute(text("CREATE TABLE IF NOT EXISTS _alembic_test_permissions (id INT)"))
+            connection.execute(text("DROP TABLE IF EXISTS _alembic_test_permissions"))
+            logger.info("Permission test passed: Can create and drop tables")
+        except Exception as e:
+            logger.error(f"Permission test failed: {e}")
+            
     except Exception as e:
         logger.warning(f"Error checking database state: {e}")
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    try:
-        # Use our engine directly to ensure proper connection
-        engine = db.get_engine()
-        
-        with engine.connect() as connection:
-            # Check DB state before migrations
-            check_db_state(connection, "BEFORE migrations")
+    retries = 3
+    
+    for attempt in range(retries):
+        try:
+            # Use our engine directly to ensure proper connection
+            engine = db.get_engine()
             
-            # Configure context with connection
-            context.configure(
-                connection=connection,
-                target_metadata=target_metadata,
-                transaction_per_migration=True  # Isolate migrations in transactions
-            )
+            # Create a new connection with AUTOCOMMIT enabled
+            # This is the key change to ensure transactions are committed properly
+            with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as connection:
+                # Check DB state before migrations
+                check_db_state(connection, "BEFORE migrations")
+                
+                # Configure context with connection
+                context.configure(
+                    connection=connection,
+                    target_metadata=target_metadata,
+                    # Use transaction_per_migration for isolated changes
+                    transaction_per_migration=True
+                )
 
-            try:
-                with context.begin_transaction():
-                    context.run_migrations()
-                logger.info("Migrations completed successfully")
-            except Exception as e:
-                logger.error(f"Error during migrations: {e}")
-                traceback.print_exc()
+                try:
+                    # Run migrations with additional error tracking
+                    start_time = time.time()
+                    logger.info("Starting migration execution")
+                    
+                    with context.begin_transaction():
+                        context.run_migrations()
+                    
+                    # Explicit commit after migrations
+                    connection.execute(text("COMMIT"))
+                    
+                    duration = time.time() - start_time
+                    logger.info(f"Migrations completed successfully in {duration:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error during migrations: {e}")
+                    traceback.print_exc()
+                    # Try to commit what succeeded so far
+                    try:
+                        connection.execute(text("COMMIT"))
+                        logger.info("Committed successful migrations")
+                    except:
+                        pass
+                    raise
+                
+                # Check DB state after migrations
+                check_db_state(connection, "AFTER migrations")
+                
+                # Verify if migrations worked by checking for specific tables
+                result = connection.execute(text("""
+                    SELECT COUNT(*) FROM information_schema.tables 
+                    WHERE table_schema='public' AND table_name IN ('questions', 'guesses')
+                """))
+                
+                table_count = result.scalar()
+                if table_count < 2:
+                    logger.warning(f"Expected tables not found after migrations! Found {table_count}/2 tables.")
+                    logger.warning("Check your migration files to ensure they contain the proper CREATE TABLE statements.")
+                else:
+                    logger.info(f"Successfully verified {table_count} expected tables exist")
+                    
+                # Success, break out of retry loop
+                return
+                
+        except Exception as e:
+            logger.error(f"Migration attempt {attempt+1}/{retries} failed: {e}")
+            traceback.print_exc()
+            
+            if attempt < retries - 1:
+                wait_time = (attempt + 1) * 2  # Exponential backoff
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                logger.error("All migration attempts failed!")
                 raise
-            
-            # Check DB state after migrations
-            check_db_state(connection, "AFTER migrations")
-            
-    except Exception as e:
-        logger.error(f"Failed to connect to database or run migrations: {e}")
-        traceback.print_exc()
-        raise
 
 if context.is_offline_mode():
     run_migrations_offline()
