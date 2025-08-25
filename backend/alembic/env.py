@@ -2,30 +2,36 @@ from logging.config import fileConfig
 import logging
 import sys
 import os
+import traceback
 
-from sqlalchemy import engine_from_config, create_engine, pool, text
+from sqlalchemy import engine_from_config, pool, text
 from alembic import context
 
-# Set up custom logger
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("alembic.env")
 
-# Import your db module
+# Add your project directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import db
 
-# this is the Alembic Config object
+# Alembic Config object
 config = context.config
 
-# Get database URL from our db.py
-db_url = db._db_url()
-sanitized_url = db_url.split("@")[0].split(":")
-sanitized_url = f"{sanitized_url[0]}:{sanitized_url[1]}:******@" + db_url.split("@")[1]
-logger.info(f"Using database URL: {sanitized_url}")
-config.set_main_option("sqlalchemy.url", db_url)
+# Override connection string with our db module
+try:
+    db_url = db._db_url()
+    masked_url = db_url.split('@')[0].split(':')[0] + ":****@" + db_url.split('@')[1]
+    logger.info(f"Using database URL: {masked_url}")
+    config.set_main_option("sqlalchemy.url", db_url)
+except Exception as e:
+    logger.error(f"Error setting up database URL: {e}")
+    traceback.print_exc()
+    raise
 
 # Interpret the config file for Python logging
-fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 
 # Set target metadata to None (we're using SQL in migrations not models)
 target_metadata = None
@@ -43,11 +49,11 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-
-def check_database_state(connection, title):
-    """Check database tables and log them"""
+def check_db_state(connection, label=""):
+    """Check database state"""
     try:
-        logger.info(f"--- {title} ---")
+        logger.info(f"--- Database state {label} ---")
+        
         # Check tables
         result = connection.execute(text("""
             SELECT table_name 
@@ -55,48 +61,49 @@ def check_database_state(connection, title):
             WHERE table_schema='public'
         """))
         tables = [row[0] for row in result]
-        if tables:
-            logger.info(f"Tables: {', '.join(tables)}")
-        else:
-            logger.info("No tables found")
-            
+        logger.info(f"Tables: {tables}")
+        
         # Check alembic_version
         if 'alembic_version' in tables:
-            result = connection.execute(text("SELECT version_num FROM alembic_version"))
+            result = connection.execute(text("SELECT * FROM alembic_version"))
             versions = [row[0] for row in result]
-            logger.info(f"Alembic versions: {', '.join(versions)}")
-        else:
-            logger.info("No alembic_version table")
+            logger.info(f"Alembic version: {versions}")
     except Exception as e:
-        logger.error(f"Error checking database state: {e}")
-
+        logger.warning(f"Error checking database state: {e}")
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    # Create our own engine directly
     try:
+        # Use our engine directly to ensure proper connection
         engine = db.get_engine()
         
         with engine.connect() as connection:
-            check_database_state(connection, "Database state BEFORE migrations")
+            # Check DB state before migrations
+            check_db_state(connection, "BEFORE migrations")
             
-            # Configure alembic context
+            # Configure context with connection
             context.configure(
                 connection=connection,
                 target_metadata=target_metadata,
-                transaction_per_migration=True  # Important to isolate migrations
+                transaction_per_migration=True  # Isolate migrations in transactions
             )
-            
-            # Run migrations
-            logger.info("Running migrations...")
-            with context.begin_transaction():
-                context.run_migrations()
-            
-            check_database_state(connection, "Database state AFTER migrations")
-    except Exception as e:
-        logger.error(f"Error during migration: {e}", exc_info=True)
-        raise
 
+            try:
+                with context.begin_transaction():
+                    context.run_migrations()
+                logger.info("Migrations completed successfully")
+            except Exception as e:
+                logger.error(f"Error during migrations: {e}")
+                traceback.print_exc()
+                raise
+            
+            # Check DB state after migrations
+            check_db_state(connection, "AFTER migrations")
+            
+    except Exception as e:
+        logger.error(f"Failed to connect to database or run migrations: {e}")
+        traceback.print_exc()
+        raise
 
 if context.is_offline_mode():
     run_migrations_offline()
