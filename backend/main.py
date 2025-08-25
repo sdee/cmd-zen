@@ -1,49 +1,47 @@
-import os
-from dotenv import load_dotenv
-
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from routers import quiz, health
-from db import get_engine, get_sessionmaker
-import logging
+import os
 
-# Enable logging for debugging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+app = FastAPI()
 
-def create_app(sessionmaker=None):
-    if sessionmaker is None:
-        engine = get_engine()
-        sessionmaker = get_sessionmaker()
-    quiz.set_sessionmaker(sessionmaker)
-    logger.debug(f"Sessionmaker provided: {sessionmaker}")
-    app = FastAPI()
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    app.include_router(quiz.router)
-    app.include_router(health.router)
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    @app.get("/api/greet")
-    def greet():
-        return {"message": "Hello from FastAPI!"}
+# API routes
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
-    if os.path.isdir("static"):
-        app.mount("/", StaticFiles(directory="static", html=True), name="static")
-    logger.debug("App initialized successfully")
-    return app
+@app.get("/api/greet")
+def greet():
+    return {"message": "Hello from FastAPI!"}
 
-# Default app for production
-app = create_app()
-# Serve React static files if present
-if os.path.isdir("static"):
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Mount static files - IMPORTANT: This must come BEFORE the catch-all route
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve index.html for the root path explicitly
+@app.get("/")
+async def serve_root():
+    return FileResponse("static/index.html")
+
+# Catch-all route to serve the frontend for client-side routing
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    # First check if it exists as an actual file
+    if full_path and os.path.exists(os.path.join("static", full_path)):
+        return FileResponse(os.path.join("static", full_path))
+    
+    # Otherwise return index.html for client-side routing
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    else:
+        return {"detail": "Frontend not deployed. Build the React app and copy to static/ directory."}
