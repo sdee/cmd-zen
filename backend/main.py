@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from routers.health import router as health_router
 from routers.quiz import router as quiz_router
 
 app = FastAPI()
@@ -18,7 +17,6 @@ app.add_middleware(
 )
 
 # Include routers under the `/api/` prefix
-app.include_router(health_router, prefix="/api/health", tags=["Health"])
 app.include_router(quiz_router, prefix="/api/quiz", tags=["Quiz"])
 
 @app.get("/health")
