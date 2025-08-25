@@ -36,14 +36,14 @@ class GuessOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 # Endpoint to fetch quiz questions
-@router.get("/api/quiz", response_model=List[QuestionOut])
+@router.get("/quiz", response_model=List[QuestionOut])
 def get_quiz(db: Session = Depends(get_db)):
     result = db.execute(select(Question))
     questions = result.scalars().all()
     return questions
 
 # Endpoint to create a new guess
-@router.post("/api/guess", response_model=GuessOut, status_code=status.HTTP_201_CREATED)
+@router.post("/guess", response_model=GuessOut, status_code=status.HTTP_201_CREATED)
 def create_guess(guess: GuessCreate, db: Session = Depends(get_db)):
     new_guess = Guess(
         question_id=guess.question_id,
@@ -56,7 +56,7 @@ def create_guess(guess: GuessCreate, db: Session = Depends(get_db)):
     return new_guess
 
 # Endpoint to fetch all guesses
-@router.get("/api/guesses", response_model=List[GuessOut])
+@router.get("/guesses", response_model=List[GuessOut])
 def get_guesses(db: Session = Depends(get_db)):
     result = db.execute(select(Guess))
     guesses = result.scalars().all()
@@ -84,7 +84,7 @@ def calculate_metrics(guesses_with_questions):
     }
 
 # Endpoint to fetch metrics
-@router.get("/api/metrics", response_model=dict)
+@router.get("/metrics", response_model=dict)
 def get_metrics(db: Session = Depends(get_db)):
     logger.debug("Session accessed in get_db")
     logger.debug(f"Session state: {db}")

@@ -8,6 +8,7 @@ from routers.quiz import router as quiz_router
 
 app = FastAPI()
 
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,9 +17,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(health_router, prefix="/health", tags=["Health"])
-app.include_router(quiz_router, prefix="/quiz", tags=["Quiz"])
+# Include routers under the `/api/` prefix
+app.include_router(health_router, prefix="/api/health", tags=["Health"])
+app.include_router(quiz_router, prefix="/api/quiz", tags=["Quiz"])
 
 @app.get("/health")
 def health_check():
