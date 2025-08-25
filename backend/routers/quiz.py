@@ -2,20 +2,20 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from typing import Callable, Counter
+from typing import List
 import logging
+from db import get_db  # Import the centralized get_db function
+from models import Question, Guess
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime
 
 # Enable logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# SessionLocal will be injected via dependency
-SessionLocal = None
-from models import Question, Guess
-from typing import List
-from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+router = APIRouter()
 
+# Pydantic models for responses
 class QuestionOut(BaseModel):
     id: int
     command: str
@@ -35,33 +35,14 @@ class GuessOut(BaseModel):
     timestamp: datetime
     model_config = ConfigDict(from_attributes=True)
 
-def get_db():
-    assert SessionLocal is not None, "SessionLocal must be set before using get_db"
-    with SessionLocal() as session:
-        logger.debug("Session accessed in get_db")
-        logger.debug(f"Session state: {session}")
-        yield session
-
-
-def set_sessionmaker(sm):
-    global SessionLocal
-    SessionLocal = sm
-
-
-# Log the state of SessionLocal
-logger.debug(f"SessionLocal state: {SessionLocal}")
-
-router = APIRouter()
-
-
-
+# Endpoint to fetch quiz questions
 @router.get("/api/quiz", response_model=List[QuestionOut])
 def get_quiz(db: Session = Depends(get_db)):
     result = db.execute(select(Question))
     questions = result.scalars().all()
     return questions
 
-
+# Endpoint to create a new guess
 @router.post("/api/guess", response_model=GuessOut, status_code=status.HTTP_201_CREATED)
 def create_guess(guess: GuessCreate, db: Session = Depends(get_db)):
     new_guess = Guess(
@@ -74,7 +55,7 @@ def create_guess(guess: GuessCreate, db: Session = Depends(get_db)):
     db.refresh(new_guess)
     return new_guess
 
-
+# Endpoint to fetch all guesses
 @router.get("/api/guesses", response_model=List[GuessOut])
 def get_guesses(db: Session = Depends(get_db)):
     result = db.execute(select(Guess))
@@ -82,8 +63,7 @@ def get_guesses(db: Session = Depends(get_db)):
     guesses.sort(key=lambda g: g.timestamp, reverse=True)
     return guesses
 
-
-# Extract tallying logic into a separate function
+# Function to calculate metrics
 def calculate_metrics(guesses_with_questions):
     tally_by_command = defaultdict(lambda: {"correct": 0, "incorrect": 0})
     for guess, question in guesses_with_questions:
@@ -103,7 +83,7 @@ def calculate_metrics(guesses_with_questions):
         "tally_by_command": dict(tally_by_command)
     }
 
-# Refactor get_metrics to use the new function
+# Endpoint to fetch metrics
 @router.get("/api/metrics", response_model=dict)
 def get_metrics(db: Session = Depends(get_db)):
     logger.debug("Session accessed in get_db")
