@@ -9,7 +9,7 @@ export default function Statistics({ onBack }) {
     async function fetchMetrics() {
       setLoading(true);
       try {
-        const res = await fetch("/api/metrics");
+        const res = await fetch("/api/quiz/metrics");
         if (!res.ok) throw new Error("Failed to fetch metrics");
         const data = await res.json();
         setMetrics(data);
