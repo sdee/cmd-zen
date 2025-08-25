@@ -62,4 +62,4 @@ def catch_all(full_path: str):
     index = os.path.join("static", "index.html")
     if os.path.exists(index):
         return FileResponse(index)
-    return JSONResponse({"detail": "Frontend not deployed. Build and copy to static/."})
+    return JSONResponse({"detail": "Frontend not deployed. Build and copy to static/."})e
