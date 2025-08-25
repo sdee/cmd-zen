@@ -1,21 +1,26 @@
-from fastapi import FastAPI
+# ...existing code...
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from health import router as health_router
+from quiz import router as quiz_router
 
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# API routes
+# Include routers
+app.include_router(health_router, prefix="/health", tags=["Health"])
+app.include_router(quiz_router, prefix="/quiz", tags=["Quiz"])
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -24,24 +29,35 @@ def health_check():
 def greet():
     return {"message": "Hello from FastAPI!"}
 
-# Mount static files - IMPORTANT: This must come BEFORE the catch-all route
-if os.path.exists("static"):
+# Mount static files BEFORE catch-all
+if os.path.isdir("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Serve index.html for the root path explicitly
-@app.get("/")
-async def serve_root():
-    return FileResponse("static/index.html")
+@app.get("/debug-static")
+def debug_static():
+    path = os.path.abspath("static")
+    files = []
+    if os.path.isdir(path):
+        for root, _, filenames in os.walk(path):
+            for f in filenames:
+                rel = os.path.relpath(os.path.join(root, f), path)
+                files.append(rel)
+    return {"static_path": path, "exists": os.path.isdir(path), "files": files}
 
-# Catch-all route to serve the frontend for client-side routing
+@app.get("/")
+def serve_index():
+    index = os.path.join("static", "index.html")
+    if os.path.exists(index):
+        return FileResponse(index)
+    return JSONResponse({"detail": "Frontend not deployed. Build and copy to static/."})
+
 @app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    # First check if it exists as an actual file
-    if full_path and os.path.exists(os.path.join("static", full_path)):
-        return FileResponse(os.path.join("static", full_path))
-    
-    # Otherwise return index.html for client-side routing
-    if os.path.exists("static/index.html"):
-        return FileResponse("static/index.html")
-    else:
-        return {"detail": "Frontend not deployed. Build the React app and copy to static/ directory."}
+def catch_all(full_path: str):
+    candidate = os.path.join("static", full_path)
+    if os.path.exists(candidate) and not os.path.isdir(candidate):
+        return FileResponse(candidate)
+    index = os.path.join("static", "index.html")
+    if os.path.exists(index):
+        return FileResponse(index)
+    return JSONResponse({"detail": "Frontend not deployed. Build and copy to static/."})
+# ...existing code...
