@@ -4,8 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from health import router as health_router
-from quiz import router as quiz_router
+from routers.health import router as health_router
+from routers.quiz import router as quiz_router
 
 app = FastAPI()
 
