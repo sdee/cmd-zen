@@ -36,7 +36,7 @@ class GuessOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 # Endpoint to fetch quiz questions
-@router.get("/quiz", response_model=List[QuestionOut])
+@router.get("/questions", response_model=List[QuestionOut])
 def get_quiz(db: Session = Depends(get_db)):
     result = db.execute(select(Question))
     questions = result.scalars().all()
