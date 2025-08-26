@@ -31,7 +31,7 @@ function VimFlashcard(props) {
     async function loadQuestions() {
       if (USE_API) {
         try {
-          const res = await fetch("/api/quiz/guestion");
+          const res = await fetch("/api/quiz/question");
           if (!res.ok) throw new Error("API error");
           const data = await res.json();
           setCommands(data);
