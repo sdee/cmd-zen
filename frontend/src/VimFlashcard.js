@@ -31,7 +31,7 @@ function VimFlashcard(props) {
     async function loadQuestions() {
       if (USE_API) {
         try {
-          const res = await fetch("/api/quiz/question");
+          const res = await fetch("/api/quiz/questions");
           if (!res.ok) throw new Error("API error");
           const data = await res.json();
           setCommands(data);
@@ -89,9 +89,9 @@ function VimFlashcard(props) {
         setInput(nextInput);
         if (nextInput === current.shortcut) {
           setStatus("correct");
-          // Fire-and-forget POST to /api/guess
+          // Fire-and-forget 
           if (USE_API && current.id) {
-            fetch("/api/guess", {
+            fetch("/api/quiz/guess", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -106,9 +106,9 @@ function VimFlashcard(props) {
         setInput(nextInput);
         setStatus("wrong");
         setTimeout(() => setShowAnswer(true), 0);
-        // Fire-and-forget POST to /api/guess for wrong answer
+        // Fire-and-forget POST
         if (USE_API && current.id) {
-          fetch("/api/guess", {
+          fetch("/api/quiz/guess", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
